@@ -14,13 +14,15 @@
       justify-content: center;
       height: 100vh;
     }
-    h1 {
-      margin-bottom: 10px;
+    h1, h2 {
+      margin: 5px;
     }
     #game {
       display: flex;
       gap: 15px;
       margin: 20px 0;
+      flex-wrap: wrap;
+      justify-content: center;
     }
     .enemy {
       background: #333;
@@ -29,6 +31,7 @@
       cursor: pointer;
       text-align: center;
       transition: transform 0.2s;
+      width: 100px;
     }
     .enemy:hover {
       transform: scale(1.1);
@@ -46,29 +49,50 @@
       width: 300px;
       border-radius: 5px;
     }
+    button {
+      margin-top: 10px;
+      padding: 10px 20px;
+      border: none;
+      background: #444;
+      color: white;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #666;
+    }
   </style>
 </head>
 <body>
   <h1>Level Merge Battle</h1>
+  <h2>Level: <span id="levelNumber">1</span></h2>
   <p>Dein Level: <span id="playerLevel">5</span></p>
   <div id="game"></div>
-  <div id="log"></div>  <script>
+  <div id="log"></div>
+  <button id="nextLevelBtn" style="display:none;">Nächstes Level starten</button>  <script>
+    let level = 1;
     let playerLevel = 5;
-    const enemies = [
-      { id: 1, level: 3 },
-      { id: 2, level: 7 },
-      { id: 3, level: 10 },
-      { id: 4, level: 6 },
-      { id: 5, level: 15 },
-    ];
+    let enemies = [];
 
     const gameDiv = document.getElementById('game');
     const playerLevelSpan = document.getElementById('playerLevel');
     const logDiv = document.getElementById('log');
+    const levelNumberSpan = document.getElementById('levelNumber');
+    const nextLevelBtn = document.getElementById('nextLevelBtn');
 
     function log(msg) {
       logDiv.innerHTML += `<div>${msg}</div>`;
       logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    function generateEnemies(level) {
+      const count = 4 + Math.floor(level / 2);
+      const base = 3 + level * 2;
+      const result = [];
+      for (let i = 0; i < count; i++) {
+        result.push({ id: i + 1, level: Math.floor(Math.random() * base) + 1 });
+      }
+      return result;
     }
 
     function render() {
@@ -77,11 +101,12 @@
         const div = document.createElement('div');
         div.className = 'enemy';
         if (enemy.defeated) div.classList.add('dead');
-        div.textContent = `Gegner
-Level ${enemy.level}`;
+        div.textContent = `Gegner\nLevel ${enemy.level}`;
         div.onclick = () => fight(enemy);
         gameDiv.appendChild(div);
       });
+      playerLevelSpan.textContent = playerLevel;
+      levelNumberSpan.textContent = level;
     }
 
     function fight(enemy) {
@@ -90,8 +115,11 @@ Level ${enemy.level}`;
         log(`Du besiegst Gegner mit Level ${enemy.level}.`);
         playerLevel += enemy.level;
         enemy.defeated = true;
-        playerLevelSpan.textContent = playerLevel;
         render();
+        if (enemies.every(e => e.defeated)) {
+          log(`<strong>Level ${level} abgeschlossen!</strong>`);
+          nextLevelBtn.style.display = 'inline-block';
+        }
       } else {
         log(`Gegner mit Level ${enemy.level} ist zu stark! Du verlierst.`);
         alert("Game Over!");
@@ -99,6 +127,20 @@ Level ${enemy.level}`;
       }
     }
 
-    render();
+    function startLevel() {
+      enemies = generateEnemies(level);
+      nextLevelBtn.style.display = 'none';
+      log(`<em>Level ${level} beginnt.</em>`);
+      render();
+    }
+
+    nextLevelBtn.onclick = () => {
+      level++;
+      playerLevel = Math.floor(playerLevel * 0.8); // Schwierigkeit hoch: Level schrumpft leicht pro Stufe
+      startLevel();
+    }
+
+    // Start bei Level 1
+    startLevel();
   </script></body>
 </html>
