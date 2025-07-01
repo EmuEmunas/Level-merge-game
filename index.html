@@ -15,7 +15,7 @@
       min-height: 100vh;
       padding-top: 20px;
     }
-    h1, h2 {
+    h1, h2, h3 {
       margin: 5px;
     }
     #game {
@@ -78,6 +78,7 @@
 <body>
   <h1>Stärke Merge Battle</h1>
   <h2>Level: <span id="levelNumber">1</span></h2>
+  <h3 id="debuffText"></h3>
   <p>Deine Stärke: <span id="playerLevel">5</span></p>
   <div id="game"></div>
   <div id="log"></div>
@@ -85,10 +86,12 @@
   <div id="stats"></div>  <script>
     let level = 1;
     let playerLevel = 5;
+    let basePlayerLevel = 5;
+    let debuff = 0;
     let enemies = [];
     let bossMode = false;
     let bossPhase = 0;
-    let bossTargetLevel = Math.floor(Math.random() * 10) + 1; // Zufällig zw. 1–10
+    let bossTargetLevel = Math.floor(Math.random() * 10) + 1;
 
     let stats = {
       levelBeendet: 0,
@@ -103,6 +106,7 @@
     const levelNumberSpan = document.getElementById('levelNumber');
     const nextLevelBtn = document.getElementById('nextLevelBtn');
     const statsDiv = document.getElementById('stats');
+    const debuffText = document.getElementById('debuffText');
 
     function log(msg) {
       logDiv.innerHTML += `<div>${msg}</div>`;
@@ -117,7 +121,7 @@
     }
 
     function generateBossWave() {
-      const phaseCount = Math.floor(Math.random() * 3) + 3; // 3–5 Phasen
+      const phaseCount = Math.floor(Math.random() * 3) + 3;
       const wave = [];
       if (bossPhase < phaseCount - 1) {
         const count = 3 + Math.floor(Math.random() * 3);
@@ -126,29 +130,28 @@
         }
         bossPhase++;
       } else {
-        wave.push({ id: 'final-boss', type: 'boss', level: Math.round(playerLevel * 1.3 + 10) });
-        log(`<strong>⚔️ Der Boss erscheint!</strong>`);
-        bossMode = false; // Bosskampf ist abgeschlossen nach dieser Phase
+        const bossStrength = Math.round(playerLevel * 1.3 + 10);
+        wave.push({ id: 'final-boss', type: 'boss', level: bossStrength });
+        log(`<strong>⚔️ Der Boss erscheint! Stärke ${bossStrength}</strong>`);
+        bossMode = false;
       }
       return wave;
     }
 
     function generateEnemies(level) {
-      const basePlayer = 5;
-      const numberOfEnemies = 5 + Math.floor(level / 2);
+      const requiredBonus = true;
       const path = [];
-      let currentStrength = basePlayer;
-
-      for (let i = 0; i < numberOfEnemies; i++) {
-        const enemyStrength = Math.round(Math.floor(Math.random() * 3) + Math.floor(currentStrength * 0.5));
-        path.push({ id: i + 1, type: 'enemy', level: enemyStrength });
-        currentStrength += enemyStrength;
-      }
-
-      if (Math.random() < 0.6) path.splice(Math.floor(Math.random() * path.length), 0, { id: 'x2', type: 'item', effect: 'x2', required: true });
-      if (Math.random() < 0.4) path.splice(Math.floor(Math.random() * path.length), 0, { id: 'minus5', type: 'item', effect: '-5', required: true });
-      if (Math.random() < 0.3) path.splice(Math.floor(Math.random() * path.length), 0, { id: 'random', type: 'item', effect: 'random', required: false });
-
+      let currentStrength = basePlayerLevel - debuff;
+      const easyEnemy = Math.floor(currentStrength * 0.6);
+      const midEnemy = Math.floor(currentStrength);
+      const hardEnemy = Math.floor(currentStrength * 1.2);
+      path.push({ id: 1, type: 'enemy', level: easyEnemy });
+      path.push({ id: 2, type: 'enemy', level: midEnemy });
+      path.push({ id: 3, type: 'enemy', level: hardEnemy });
+      path.push({ id: 'x2', type: 'item', effect: 'x2', required: true });
+      path.push({ id: 4, type: 'enemy', level: (hardEnemy * 2) + 2 });
+      if (Math.random() < 0.4) path.push({ id: 'minus5', type: 'item', effect: '-5', required: true });
+      if (Math.random() < 0.3) path.push({ id: 'random', type: 'item', effect: 'random', required: false });
       shuffleArray(path);
       return path;
     }
@@ -159,9 +162,13 @@
         const div = document.createElement('div');
         div.className = enemy.type;
         if (enemy.defeated) div.classList.add('dead');
-        div.textContent = enemy.type === 'boss' ? `🧠 BOSS\n??` : enemy.type === 'enemy' ? `Gegner\nStärke ${enemy.level}` : '';
-        div.title = enemy.type === 'boss' ? 'Endgegner – unbekannte Stärke!' : 'Greife nur an, wenn du stärker bist!';
-
+        if (enemy.type === 'boss') {
+          div.textContent = `🧠 BOSS\nStärke ${enemy.level}`;
+          div.title = 'Endgegner – kalkuliere gut!';
+        } else if (enemy.type === 'enemy') {
+          div.textContent = `Gegner\nStärke ${enemy.level}`;
+          div.title = 'Greife nur an, wenn du stärker bist!';
+        }
         if (enemy.type === 'enemy' || enemy.type === 'boss') {
           div.onclick = () => fight(enemy);
         } else if (enemy.type === 'item') {
@@ -222,6 +229,7 @@
       });
       playerLevelSpan.textContent = playerLevel;
       levelNumberSpan.textContent = level;
+      debuffText.textContent = debuff > 0 ? `🧨 Debuff: Erschöpfung x${debuff} – du startest mit ${basePlayerLevel - debuff} Stärke` : '';
     }
 
     function fight(enemy) {
@@ -235,6 +243,9 @@
         checkLevelComplete();
       } else {
         log(`${enemy.type === 'boss' ? 'Der Boss' : 'Gegner'} mit Stärke ${strength} ist zu stark oder gleich stark! Du verlierst.`);
+        if (enemy.type === 'boss') {
+          debuff = Math.min(debuff + 1, 4);
+        }
         alert("Game Over!\n\nAbgeschlossene Level: " + stats.levelBeendet + "\nVerwendete x2-Boni: " + stats.bonusGenutzt + "\nGefallene Fallen: " + stats.fallenGetroffen + "\nZufall ausgelöst: " + stats.zufallGenutzt);
         location.reload();
       }
@@ -267,7 +278,7 @@
     }
 
     function startLevel() {
-      playerLevel = 5;
+      playerLevel = basePlayerLevel - debuff;
       bossPhase = 0;
       nextLevelBtn.style.display = 'none';
       log(`<em>Level ${level} beginnt.</em>`);
