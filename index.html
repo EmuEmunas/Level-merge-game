@@ -127,14 +127,14 @@
 
       if (Math.random() < 0.6) {
         const bonusIndex = Math.floor(Math.random() * path.length);
-        path.splice(bonusIndex, 0, { id: 'x2', type: 'item', effect: 'x2' });
+        path.splice(bonusIndex, 0, { id: 'x2', type: 'item', effect: 'x2', required: true });
         x2Added = true;
       }
       if (Math.random() < 0.4) {
-        path.splice(Math.floor(Math.random() * path.length), 0, { id: 'minus5', type: 'item', effect: '-5' });
+        path.splice(Math.floor(Math.random() * path.length), 0, { id: 'minus5', type: 'item', effect: '-5', required: true });
       }
       if (Math.random() < 0.3) {
-        path.splice(Math.floor(Math.random() * path.length), 0, { id: 'random', type: 'item', effect: 'random' });
+        path.splice(Math.floor(Math.random() * path.length), 0, { id: 'random', type: 'item', effect: 'random', required: false });
       }
 
       if (x2Added) {
@@ -232,7 +232,9 @@
     }
 
     function checkLevelComplete() {
-      if (enemies.every(e => e.defeated)) {
+      const remaining = enemies.filter(e => !e.defeated);
+      const allDone = remaining.every(e => e.type === 'item' && e.effect === 'random' && !e.required);
+      if (remaining.length === 0 || allDone) {
         log(`<strong>Level ${level} abgeschlossen!</strong>`);
         stats.levelBeendet++;
         updateStats();
