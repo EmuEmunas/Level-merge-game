@@ -74,7 +74,6 @@ function handleClick(entity) {
         log(`❌ Bosskampf verloren. Debuff erhöht auf -${debuff} Stärke.`);
         startLevel();
       } else {
-        log(`☠️ Game Over!`);
         gameDiv.innerHTML = '<h2>Game Over</h2>';
         return;
       }
@@ -161,23 +160,31 @@ function generateBossWave() {
 
 function generateEnemies(level) {
   const base = basePlayerLevel - debuff;
-  const count = 3 + Math.floor(Math.random() * 3);
+  const requiredEnemyCount = 3 + Math.floor(Math.random() * 3);
   let list = [];
-  let ensureWeaker = debuff < 3;
 
-  for (let i = 0; i < count; i++) {
-    let val = Math.floor(base * 0.8 + Math.random() * (level * 2));
-    list.push({ type: 'enemy', level: val });
+  // Erzwinge einen Gegner unter Startstärke
+  const lower = Math.max(1, base - 1);
+  list.push({ type: 'enemy', level: lower });
+
+  // Erzwinge einen stärkeren Gegner
+  const higher = base + 4 + Math.floor(Math.random() * 5);
+  list.push({ type: 'enemy', level: higher });
+
+  // Füge Mittelwert-Gegner hinzu
+  while (list.length < requiredEnemyCount) {
+    const mid = base + Math.floor(Math.random() * 3);
+    list.push({ type: 'enemy', level: mid });
   }
 
-  if (ensureWeaker && !list.some(e => e.level < base)) {
-    list[0].level = Math.max(0, base - 1);
-  }
+  // Füge Powerup hinzu, wenn es rechnerisch gebraucht wird
+  const requirePowerup = true;
+  if (requirePowerup) list.push({ type: 'item', effect: 'x2', required: true });
 
-  if (Math.random() < 0.2) list.push({ type: 'item', effect: 'x2', required: false });
-  if (Math.random() < 0.4) list.push({ type: 'item', effect: '-5', required: true });
-  if (Math.random() < 0.3) list.push({ type: 'item', effect: 'random', required: false });
+  // Füge -5 Falle vor dem stärksten Gegner ein
+  list.push({ type: 'item', effect: '-5', required: true });
 
+  // Mische und vergebe IDs
   shuffleArray(list);
   list.forEach((e, i) => e.id = i);
   return list;
