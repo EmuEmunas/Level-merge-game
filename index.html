@@ -87,10 +87,17 @@
 
     function generateEnemies(level) {
       const count = 4 + Math.floor(level / 2);
-      const base = 3 + level * 2;
       const result = [];
+      const twist = Math.floor(Math.random() * 3); // macht das Level schwerer oder leichter
+      let baseLevels = [
+        ...Array(count).keys()
+      ].map(i => 3 + Math.floor(Math.random() * (level * 3)));
+
+      if (twist === 1) baseLevels[Math.floor(Math.random() * count)] *= 2;
+      if (twist === 2) baseLevels.sort(() => Math.random() - 0.5);
+
       for (let i = 0; i < count; i++) {
-        result.push({ id: i + 1, level: Math.floor(Math.random() * base) + 1 });
+        result.push({ id: i + 1, level: baseLevels[i] });
       }
       return result;
     }
@@ -128,6 +135,7 @@
     }
 
     function startLevel() {
+      playerLevel = 5; // Startet jedes Level bei 5
       enemies = generateEnemies(level);
       nextLevelBtn.style.display = 'none';
       log(`<em>Level ${level} beginnt.</em>`);
@@ -136,7 +144,6 @@
 
     nextLevelBtn.onclick = () => {
       level++;
-      playerLevel = Math.floor(playerLevel * 0.8); // Schwierigkeit hoch: Level schrumpft leicht pro Stufe
       startLevel();
     }
 
