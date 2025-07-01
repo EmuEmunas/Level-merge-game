@@ -86,19 +86,32 @@
     }
 
     function generateEnemies(level) {
-      const count = 4 + Math.floor(level / 2);
+      const count = 5 + Math.floor(level / 2);
       const result = [];
-      const twist = Math.floor(Math.random() * 3); // macht das Level schwerer oder leichter
-      let baseLevels = [
-        ...Array(count).keys()
-      ].map(i => 3 + Math.floor(Math.random() * (level * 3)));
+      const baseEnemyLevel = 3 + Math.floor(level * 1.5);
 
-      if (twist === 1) baseLevels[Math.floor(Math.random() * count)] *= 2;
-      if (twist === 2) baseLevels.sort(() => Math.random() - 0.5);
+      // 2 sichere Gegner, die man mit Level 5 besiegen kann
+      result.push({ id: 1, level: Math.floor(Math.random() * 3) + 2 });
+      result.push({ id: 2, level: Math.floor(Math.random() * 3) + 3 });
 
-      for (let i = 0; i < count; i++) {
-        result.push({ id: i + 1, level: baseLevels[i] });
+      let playerPreview = 5 + result[0].level + result[1].level;
+
+      // Restliche Gegner an das bisher mögliche Level anpassen
+      for (let i = 3; i <= count; i++) {
+        let max = Math.floor(playerPreview * 1.2);
+        let min = Math.max(1, Math.floor(playerPreview * 0.7));
+        const enemyLevel = Math.floor(Math.random() * (max - min + 1)) + min;
+        playerPreview += enemyLevel; // falls er besiegt wird
+        result.push({ id: i, level: enemyLevel });
       }
+
+      // Optionaler starker Gegner als Twist
+      if (Math.random() < 0.4) {
+        result.push({ id: count + 1, level: playerPreview + Math.floor(Math.random() * 10) + 5 });
+      }
+
+      // Mische die Gegner zufällig durch
+      result.sort(() => Math.random() - 0.5);
       return result;
     }
 
@@ -135,7 +148,7 @@
     }
 
     function startLevel() {
-      playerLevel = 5; // Startet jedes Level bei 5
+      playerLevel = 5;
       enemies = generateEnemies(level);
       nextLevelBtn.style.display = 'none';
       log(`<em>Level ${level} beginnt.</em>`);
