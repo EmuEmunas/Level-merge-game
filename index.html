@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -83,7 +84,9 @@
   <div id="game"></div>
   <div id="log"></div>
   <button id="nextLevelBtn" style="display:none;">Nächstes Level starten</button>
-  <div id="stats"></div>  <script>
+  <div id="stats"></div>
+
+  <script>
     let level = 1;
     let playerLevel = 5;
     let basePlayerLevel = 5;
@@ -92,6 +95,7 @@
     let bossMode = false;
     let bossPhase = 0;
     let bossTargetLevel = Math.floor(Math.random() * 10) + 1;
+    let totalEnemyStrength = 0;
 
     let stats = {
       levelBeendet: 0,
@@ -127,14 +131,18 @@
       if (bossPhase < phaseCount - 1) {
         const count = 3 + Math.floor(Math.random() * 3);
         for (let i = 0; i < count; i++) {
-          wave.push({ type: 'enemy', level: Math.floor(playerLevel * 0.7 + Math.random() * 5) });
+          let str = Math.floor(playerLevel * 0.6 + Math.random() * 8);
+          wave.push({ type: 'enemy', level: str });
+          totalEnemyStrength += str;
         }
         bossPhase++;
       } else {
-        const bossStrength = Math.floor(playerLevel * 1.3 + 10);
+        const factor = 0.95 + Math.random() * 0.1;
+        const bossStrength = Math.round(totalEnemyStrength * factor);
         wave.push({ type: 'boss', level: bossStrength });
         log(`<strong>⚔️ Der Boss erscheint! Stärke ${bossStrength}</strong>`);
         bossMode = false;
+        totalEnemyStrength = 0;
       }
       wave.forEach((e, i) => e.id = `b${bossPhase}-${i}`);
       return wave;
@@ -257,7 +265,7 @@
         if (enemy.type === 'boss') {
           debuff = Math.min(debuff + 1, 5);
           log(`<strong>⚠️ Du hast den Boss nicht besiegt. Erschöpfung +1!</strong>`);
-          checkLevelComplete();
+          nextLevel();
         } else {
           log(`Verloren gegen Gegner Stärke ${enemy.level}`);
           alert("Game Over");
@@ -297,6 +305,7 @@
       playerLevel = basePlayerLevel - debuff;
       nextLevelBtn.style.display = 'none';
       bossPhase = 0;
+      totalEnemyStrength = 0;
       if ((level - 1) % 10 === bossTargetLevel - 1) {
         log(`<strong>⚔️ Bosskampf beginnt!</strong>`);
         bossMode = true;
@@ -307,11 +316,16 @@
       render();
     }
 
-    nextLevelBtn.onclick = () => {
+    function nextLevel() {
       level++;
       startLevel();
+    }
+
+    nextLevelBtn.onclick = () => {
+      nextLevel();
     };
 
     startLevel();
-  </script></body>
+  </script>
+</body>
 </html>
