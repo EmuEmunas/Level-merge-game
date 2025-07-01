@@ -1,5 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html><html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -84,9 +83,7 @@
   <div id="game"></div>
   <div id="log"></div>
   <button id="nextLevelBtn" style="display:none;">Nächstes Level starten</button>
-  <div id="stats"></div>
-
-  <script>
+  <div id="stats"></div>  <script>
     let level = 1;
     let playerLevel = 5;
     let basePlayerLevel = 5;
@@ -254,7 +251,7 @@
         enemy.defeated = true;
 
         if (enemy.type === 'boss') {
-          log(`<strong>✅ Boss besiegt! Debuff aufgehoben.</strong>`);
+          if (debuff > 0) log(`<strong>✅ Boss besiegt! Debuff aufgehoben.</strong>`);
           debuff = 0;
           stats.bosseBesiegt++;
         }
@@ -326,6 +323,5 @@
     };
 
     startLevel();
-  </script>
-</body>
+  </script></body>
 </html>
