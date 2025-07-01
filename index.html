@@ -11,8 +11,9 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
-      height: 100vh;
+      justify-content: flex-start;
+      min-height: 100vh;
+      padding-top: 20px;
     }
     h1, h2 {
       margin: 5px;
@@ -67,6 +68,10 @@
     button:hover {
       background: #666;
     }
+    #stats {
+      margin-top: 20px;
+      color: #ccc;
+    }
   </style>
 </head>
 <body>
@@ -75,16 +80,24 @@
   <p>Deine Stärke: <span id="playerLevel">5</span></p>
   <div id="game"></div>
   <div id="log"></div>
-  <button id="nextLevelBtn" style="display:none;">Nächstes Level starten</button>  <script>
+  <button id="nextLevelBtn" style="display:none;">Nächstes Level starten</button>
+  <div id="stats"></div>  <script>
     let level = 1;
     let playerLevel = 5;
     let enemies = [];
+    let stats = {
+      levelBeendet: 0,
+      bonusGenutzt: 0,
+      fallenGetroffen: 0,
+      zufallGenutzt: 0
+    };
 
     const gameDiv = document.getElementById('game');
     const playerLevelSpan = document.getElementById('playerLevel');
     const logDiv = document.getElementById('log');
     const levelNumberSpan = document.getElementById('levelNumber');
     const nextLevelBtn = document.getElementById('nextLevelBtn');
+    const statsDiv = document.getElementById('stats');
 
     function log(msg) {
       logDiv.innerHTML += `<div>${msg}</div>`;
@@ -105,7 +118,7 @@
       let currentStrength = basePlayer;
 
       for (let i = 0; i < numberOfEnemies; i++) {
-        const enemyStrength = Math.floor(Math.random() * 3) + Math.floor(currentStrength * 0.5);
+        const enemyStrength = Math.round(Math.floor(Math.random() * 3) + Math.floor(currentStrength * 0.5));
         path.push({ id: i + 1, type: 'enemy', level: enemyStrength });
         currentStrength += enemyStrength;
       }
@@ -125,7 +138,7 @@
       }
 
       if (x2Added) {
-        const maxEnemy = { id: 'boss', type: 'enemy', level: currentStrength * 1.5 + Math.floor(Math.random() * 10) };
+        const maxEnemy = { id: 'boss', type: 'enemy', level: Math.round(currentStrength * 1.5 + Math.floor(Math.random() * 10)) };
         path.push(maxEnemy);
       }
 
@@ -141,21 +154,25 @@
         if (enemy.defeated) div.classList.add('dead');
         if (enemy.type === 'enemy') {
           div.textContent = `Gegner\nStärke ${enemy.level}`;
+          div.title = 'Greife nur an, wenn du stärker bist!';
           div.onclick = () => fight(enemy);
         } else if (enemy.type === 'item') {
           if (enemy.effect === 'x2') {
             div.classList.add('x2');
             div.textContent = 'Bonus x2';
+            div.title = 'Verdoppelt deine aktuelle Stärke';
             div.onclick = () => {
               log(`Du sammelst Bonus x2! Deine Stärke verdoppelt sich.`);
               playerLevel *= 2;
               enemy.defeated = true;
+              stats.bonusGenutzt++;
               render();
               checkLevelComplete();
             };
           } else if (enemy.effect === '-5') {
             div.classList.add('minus5');
             div.textContent = '-5 Falle';
+            div.title = 'Verringert deine Stärke um 5';
             div.onclick = () => {
               if (playerLevel <= 5) {
                 log(`Du verlierst 5 Stärke, aber hattest nur ${playerLevel}. Du verlierst.`);
@@ -165,6 +182,7 @@
               }
               log(`Du trittst in eine Falle! -5 Stärke.`);
               playerLevel -= 5;
+              stats.fallenGetroffen++;
               enemy.defeated = true;
               render();
               checkLevelComplete();
@@ -172,8 +190,10 @@
           } else if (enemy.effect === 'random') {
             div.classList.add('random');
             div.textContent = 'Zufall';
+            div.title = 'Kann deine Stärke ändern – positiv, negativ oder gar nicht';
             div.onclick = () => {
               const rnd = Math.random();
+              stats.zufallGenutzt++;
               if (rnd < 0.33) {
                 log(`Zufall! Deine Stärke wird halbiert.`);
                 playerLevel = Math.floor(playerLevel / 2);
@@ -206,7 +226,7 @@
         checkLevelComplete();
       } else {
         log(`Gegner mit Stärke ${enemy.level} ist zu stark oder gleich stark! Du verlierst.`);
-        alert("Game Over!");
+        alert("Game Over!\n\nAbgeschlossene Level: " + stats.levelBeendet + "\nVerwendete x2-Boni: " + stats.bonusGenutzt + "\nGefallene Fallen: " + stats.fallenGetroffen + "\nZufall ausgelöst: " + stats.zufallGenutzt);
         location.reload();
       }
     }
@@ -214,8 +234,20 @@
     function checkLevelComplete() {
       if (enemies.every(e => e.defeated)) {
         log(`<strong>Level ${level} abgeschlossen!</strong>`);
+        stats.levelBeendet++;
+        updateStats();
         nextLevelBtn.style.display = 'inline-block';
       }
+    }
+
+    function updateStats() {
+      statsDiv.innerHTML = `
+        <strong>Statistik:</strong><br>
+        Abgeschlossene Level: ${stats.levelBeendet}<br>
+        Verwendete x2-Boni: ${stats.bonusGenutzt}<br>
+        Gefallene Fallen: ${stats.fallenGetroffen}<br>
+        Zufall ausgelöst: ${stats.zufallGenutzt}<br>
+      `;
     }
 
     function startLevel() {
