@@ -2,7 +2,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Level Merge Battle</title>
+  <title>Stärke Merge Battle</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -24,7 +24,7 @@
       flex-wrap: wrap;
       justify-content: center;
     }
-    .enemy {
+    .enemy, .item {
       background: #333;
       padding: 20px;
       border-radius: 10px;
@@ -33,7 +33,7 @@
       transition: transform 0.2s;
       width: 100px;
     }
-    .enemy:hover {
+    .enemy:hover, .item:hover {
       transform: scale(1.1);
       background: #444;
     }
@@ -64,9 +64,9 @@
   </style>
 </head>
 <body>
-  <h1>Level Merge Battle</h1>
+  <h1>Stärke Merge Battle</h1>
   <h2>Level: <span id="levelNumber">1</span></h2>
-  <p>Dein Level: <span id="playerLevel">5</span></p>
+  <p>Deine Stärke: <span id="playerLevel">5</span></p>
   <div id="game"></div>
   <div id="log"></div>
   <button id="nextLevelBtn" style="display:none;">Nächstes Level starten</button>  <script>
@@ -85,44 +85,55 @@
       logDiv.scrollTop = logDiv.scrollHeight;
     }
 
+    function shuffleArray(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+    }
+
     function generateEnemies(level) {
-      const count = 5 + Math.floor(level / 2);
-      const result = [];
-      const baseEnemyLevel = 3 + Math.floor(level * 1.5);
+      const basePlayer = 5;
+      const numberOfEnemies = 5 + Math.floor(level / 2);
+      const path = [];
+      let currentStrength = basePlayer;
 
-      // 2 sichere Gegner, die man mit Level 5 besiegen kann
-      result.push({ id: 1, level: Math.floor(Math.random() * 3) + 2 });
-      result.push({ id: 2, level: Math.floor(Math.random() * 3) + 3 });
-
-      let playerPreview = 5 + result[0].level + result[1].level;
-
-      // Restliche Gegner an das bisher mögliche Level anpassen
-      for (let i = 3; i <= count; i++) {
-        let max = Math.floor(playerPreview * 1.2);
-        let min = Math.max(1, Math.floor(playerPreview * 0.7));
-        const enemyLevel = Math.floor(Math.random() * (max - min + 1)) + min;
-        playerPreview += enemyLevel; // falls er besiegt wird
-        result.push({ id: i, level: enemyLevel });
+      // Erstelle einen Pfad mit Gegnern, bei dem jede Begegnung schaffbar ist
+      for (let i = 0; i < numberOfEnemies; i++) {
+        const enemyStrength = Math.floor(Math.random() * 3) + Math.floor(currentStrength * 0.5);
+        path.push({ id: i + 1, type: 'enemy', level: enemyStrength });
+        currentStrength += enemyStrength;
       }
 
-      // Optionaler starker Gegner als Twist
-      if (Math.random() < 0.4) {
-        result.push({ id: count + 1, level: playerPreview + Math.floor(Math.random() * 10) + 5 });
+      // Optional ein Bonus-Item einfügen (x2)
+      if (Math.random() < 0.5) {
+        const bonusIndex = Math.floor(Math.random() * path.length);
+        path.splice(bonusIndex, 0, { id: 'x2', type: 'item', effect: 'x2' });
       }
 
-      // Mische die Gegner zufällig durch
-      result.sort(() => Math.random() - 0.5);
-      return result;
+      shuffleArray(path);
+      return path;
     }
 
     function render() {
       gameDiv.innerHTML = '';
       enemies.forEach(enemy => {
         const div = document.createElement('div');
-        div.className = 'enemy';
+        div.className = enemy.type === 'enemy' ? 'enemy' : 'item';
         if (enemy.defeated) div.classList.add('dead');
-        div.textContent = `Gegner\nLevel ${enemy.level}`;
-        div.onclick = () => fight(enemy);
+        if (enemy.type === 'enemy') {
+          div.textContent = `Gegner\nStärke ${enemy.level}`;
+          div.onclick = () => fight(enemy);
+        } else if (enemy.type === 'item' && enemy.effect === 'x2') {
+          div.textContent = 'Bonus x2';
+          div.onclick = () => {
+            log(`Du sammelst Bonus x2! Deine Stärke verdoppelt sich.`);
+            playerLevel *= 2;
+            enemy.defeated = true;
+            render();
+            checkLevelComplete();
+          };
+        }
         gameDiv.appendChild(div);
       });
       playerLevelSpan.textContent = playerLevel;
@@ -132,18 +143,22 @@
     function fight(enemy) {
       if (enemy.defeated) return;
       if (playerLevel >= enemy.level) {
-        log(`Du besiegst Gegner mit Level ${enemy.level}.`);
+        log(`Du besiegst Gegner mit Stärke ${enemy.level}.`);
         playerLevel += enemy.level;
         enemy.defeated = true;
         render();
-        if (enemies.every(e => e.defeated)) {
-          log(`<strong>Level ${level} abgeschlossen!</strong>`);
-          nextLevelBtn.style.display = 'inline-block';
-        }
+        checkLevelComplete();
       } else {
-        log(`Gegner mit Level ${enemy.level} ist zu stark! Du verlierst.`);
+        log(`Gegner mit Stärke ${enemy.level} ist zu stark! Du verlierst.`);
         alert("Game Over!");
         location.reload();
+      }
+    }
+
+    function checkLevelComplete() {
+      if (enemies.every(e => e.defeated)) {
+        log(`<strong>Level ${level} abgeschlossen!</strong>`);
+        nextLevelBtn.style.display = 'inline-block';
       }
     }
 
