@@ -201,7 +201,29 @@
         totalEnemyStrength = 0;
         enemies = generateBossWave();
       } else {
-        enemies = generateEnemies(level);
+        function generateEnemies(level) {
+  const base = basePlayerLevel - debuff;
+  const count = 3 + Math.floor(Math.random() * 3);
+  let list = [];
+  let ensureWeaker = debuff < 3;
+
+  for (let i = 0; i < count; i++) {
+    let val = Math.floor(base * 0.8 + Math.random() * (level * 2));
+    list.push({ type: 'enemy', level: val });
+  }
+
+  if (ensureWeaker && !list.some(e => e.level < base)) {
+    list[0].level = Math.max(0, base - 1);
+  }
+
+  if (Math.random() < 0.2) list.push({ type: 'item', effect: 'x2', required: false });
+  if (Math.random() < 0.4) list.push({ type: 'item', effect: '-5', required: true });
+  if (Math.random() < 0.3) list.push({ type: 'item', effect: 'random', required: false });
+
+  shuffleArray(list);
+  list.forEach((e, i) => e.id = i);
+  return list;
+}
       }
       updateUI();
     }
