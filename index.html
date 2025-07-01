@@ -98,17 +98,32 @@
       const path = [];
       let currentStrength = basePlayer;
 
-      // Erstelle einen Pfad mit Gegnern, bei dem jede Begegnung schaffbar ist
+      // Erstelle einen Pfad mit Gegnern, der machbar ist
       for (let i = 0; i < numberOfEnemies; i++) {
         const enemyStrength = Math.floor(Math.random() * 3) + Math.floor(currentStrength * 0.5);
         path.push({ id: i + 1, type: 'enemy', level: enemyStrength });
         currentStrength += enemyStrength;
       }
 
-      // Optional ein Bonus-Item einfügen (x2)
-      if (Math.random() < 0.5) {
+      let x2Added = false;
+
+      // Füge Bonus-Items ein
+      if (Math.random() < 0.6) {
         const bonusIndex = Math.floor(Math.random() * path.length);
         path.splice(bonusIndex, 0, { id: 'x2', type: 'item', effect: 'x2' });
+        x2Added = true;
+      }
+      if (Math.random() < 0.4) {
+        path.splice(Math.floor(Math.random() * path.length), 0, { id: 'minus5', type: 'item', effect: '-5' });
+      }
+      if (Math.random() < 0.3) {
+        path.splice(Math.floor(Math.random() * path.length), 0, { id: 'random', type: 'item', effect: 'random' });
+      }
+
+      // Wenn x2 eingebaut ist, erhöhe Endgegner deutlich, damit er nötig ist
+      if (x2Added) {
+        const maxEnemy = { id: 'boss', type: 'enemy', level: currentStrength * 1.5 + Math.floor(Math.random() * 10) };
+        path.push(maxEnemy);
       }
 
       shuffleArray(path);
@@ -124,15 +139,50 @@
         if (enemy.type === 'enemy') {
           div.textContent = `Gegner\nStärke ${enemy.level}`;
           div.onclick = () => fight(enemy);
-        } else if (enemy.type === 'item' && enemy.effect === 'x2') {
-          div.textContent = 'Bonus x2';
-          div.onclick = () => {
-            log(`Du sammelst Bonus x2! Deine Stärke verdoppelt sich.`);
-            playerLevel *= 2;
-            enemy.defeated = true;
-            render();
-            checkLevelComplete();
-          };
+        } else if (enemy.type === 'item') {
+          if (enemy.effect === 'x2') {
+            div.textContent = 'Bonus x2';
+            div.onclick = () => {
+              log(`Du sammelst Bonus x2! Deine Stärke verdoppelt sich.`);
+              playerLevel *= 2;
+              enemy.defeated = true;
+              render();
+              checkLevelComplete();
+            };
+          } else if (enemy.effect === '-5') {
+            div.textContent = '-5 Falle';
+            div.onclick = () => {
+              if (playerLevel <= 5) {
+                log(`Du verlierst 5 Stärke, aber hattest nur ${playerLevel}. Du verlierst.`);
+                alert("Game Over!");
+                location.reload();
+                return;
+              }
+              log(`Du trittst in eine Falle! -5 Stärke.`);
+              playerLevel -= 5;
+              enemy.defeated = true;
+              render();
+              checkLevelComplete();
+            };
+          } else if (enemy.effect === 'random') {
+            div.textContent = 'Zufall';
+            div.onclick = () => {
+              const rnd = Math.random();
+              if (rnd < 0.33) {
+                log(`Zufall! Deine Stärke wird halbiert.`);
+                playerLevel = Math.floor(playerLevel / 2);
+              } else if (rnd < 0.66) {
+                const gain = Math.floor(Math.random() * 10 + 1);
+                log(`Zufall! Du bekommst ${gain} Stärke dazu.`);
+                playerLevel += gain;
+              } else {
+                log(`Zufall! Nichts passiert.`);
+              }
+              enemy.defeated = true;
+              render();
+              checkLevelComplete();
+            };
+          }
         }
         gameDiv.appendChild(div);
       });
