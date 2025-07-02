@@ -1,7 +1,7 @@
 <!DOCTYPE html><html lang="de">
 <head>
   <meta charset="UTF-8">
-  <title>Raster-Prototyp mit Wegfindung</title>
+  <title>Raster-Prototyp mit A* Wegfindung</title>
   <style>
     body { background: #111; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; }
     h1 { margin-top: 20px; }
@@ -29,7 +29,7 @@
   </style>
 </head>
 <body>
-  <h1>🧠 Stärke Merge Battle – Prototyp mit Wegfindung</h1>
+  <h1>🧠 Stärke Merge Battle – A* Wegfindung</h1>
   <p>Spielerstärke: <span id="playerLevel">1</span></p>
   <div id="grid"></div>
   <p id="message"></p>  <script>
@@ -92,7 +92,7 @@
     }
 
     function moveTo(enemy) {
-      const path = findPath(playerPosition, { x: enemy.x, y: enemy.y });
+      const path = aStar(playerPosition, { x: enemy.x, y: enemy.y });
       if (!path) {
         message.textContent = 'Kein Weg zum Ziel!';
         return;
@@ -135,37 +135,66 @@
       renderGrid();
     }
 
-    function findPath(start, end) {
-      const queue = [[start]];
-      const visited = new Set();
+    function aStar(start, goal) {
+      const openSet = [start];
+      const cameFrom = {};
+      const gScore = {};
+      const fScore = {};
 
-      while (queue.length > 0) {
-        const path = queue.shift();
-        const { x, y } = path[path.length - 1];
-        const key = `${x},${y}`;
-        if (visited.has(key)) continue;
-        visited.add(key);
+      function key(pos) {
+        return `${pos.x},${pos.y}`;
+      }
 
-        if (x === end.x && y === end.y) return path;
+      gScore[key(start)] = 0;
+      fScore[key(start)] = heuristic(start, goal);
+
+      while (openSet.length > 0) {
+        openSet.sort((a, b) => fScore[key(a)] - fScore[key(b)]);
+        const current = openSet.shift();
+
+        if (current.x === goal.x && current.y === goal.y) {
+          return reconstructPath(cameFrom, current);
+        }
 
         const neighbors = [
-          { x: x + 1, y },
-          { x: x - 1, y },
-          { x, y: y + 1 },
-          { x, y: y - 1 }
+          { x: current.x + 1, y: current.y },
+          { x: current.x - 1, y: current.y },
+          { x: current.x, y: current.y + 1 },
+          { x: current.x, y: current.y - 1 }
         ];
 
-        for (const n of neighbors) {
+        for (const neighbor of neighbors) {
           if (
-            n.x >= 0 && n.x < gridSize &&
-            n.y >= 0 && n.y < gridSize &&
-            !isWall(n.x, n.y)
-          ) {
-            queue.push([...path, n]);
+            neighbor.x < 0 || neighbor.y < 0 ||
+            neighbor.x >= gridSize || neighbor.y >= gridSize ||
+            isWall(neighbor.x, neighbor.y)
+          ) continue;
+
+          const tentativeG = gScore[key(current)] + 1;
+          if (tentativeG < (gScore[key(neighbor)] || Infinity)) {
+            cameFrom[key(neighbor)] = current;
+            gScore[key(neighbor)] = tentativeG;
+            fScore[key(neighbor)] = tentativeG + heuristic(neighbor, goal);
+            if (!openSet.some(p => p.x === neighbor.x && p.y === neighbor.y)) {
+              openSet.push(neighbor);
+            }
           }
         }
       }
       return null;
+    }
+
+    function heuristic(pos1, pos2) {
+      return Math.abs(pos1.x - pos2.x) + Math.abs(pos1.y - pos2.y);
+    }
+
+    function reconstructPath(cameFrom, current) {
+      const path = [current];
+      while (cameFrom[`${current.x},${current.y}`]) {
+        current = cameFrom[`${current.x},${current.y}`];
+        path.unshift(current);
+      }
+      return path.slice(1);
     }
 
     renderGrid();
