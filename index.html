@@ -1,7 +1,7 @@
 <!DOCTYPE html><html lang="de">
 <head>
   <meta charset="UTF-8">
-  <title>Raster-Prototyp mit A* und Suchbegrenzung</title>
+  <title>Raster-Prototyp mit Lazy Evaluation</title>
   <style>
     body { background: #111; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; }
     h1 { margin-top: 20px; }
@@ -29,12 +29,12 @@
   </style>
 </head>
 <body>
-  <h1>🧠 Stärke Merge Battle – Begrenzte Wegsuche</h1>
+  <h1>🧠 Stärke Merge Battle – Lazy Evaluation</h1>
   <p>Spielerstärke: <span id="playerLevel">1</span></p>
   <div id="grid"></div>
   <p id="message"></p>  <script>
     const gridSize = 32;
-    const searchLimit = 8; // maximale Reichweite
+    const searchLimit = 8;
     const grid = document.getElementById('grid');
     const message = document.getElementById('message');
     const playerLevelDisplay = document.getElementById('playerLevel');
@@ -42,6 +42,7 @@
     let playerLevel = 1;
     let playerSpawn = { x: 1, y: 1 };
     let playerPosition = { ...playerSpawn };
+    let animationFrame;
 
     const enemies = [
       { x: 4, y: 1, level: 1, alive: true },
@@ -71,7 +72,7 @@
         if (enemy) {
           cell.classList.add('enemy');
           cell.textContent = enemy.level;
-          cell.addEventListener('click', () => moveTo(enemy));
+          cell.addEventListener('click', () => lazyMoveTo(enemy));
         } else if (isWall(x, y)) {
           cell.classList.add('wall');
         } else {
@@ -92,19 +93,20 @@
       }
     }
 
-    function moveTo(enemy) {
+    function lazyMoveTo(enemy) {
       const dx = Math.abs(enemy.x - playerPosition.x);
       const dy = Math.abs(enemy.y - playerPosition.y);
       if (dx > searchLimit || dy > searchLimit) {
         message.textContent = 'Ziel liegt zu weit entfernt!';
         return;
       }
-      const path = aStar(playerPosition, { x: enemy.x, y: enemy.y });
-      if (!path) {
-        message.textContent = 'Kein Weg zum Ziel!';
-        return;
-      }
-      followPath(path, enemy);
+      lazyAStar(playerPosition, { x: enemy.x, y: enemy.y }, path => {
+        if (!path) {
+          message.textContent = 'Kein Weg zum Ziel!';
+        } else {
+          followPath(path, enemy);
+        }
+      });
     }
 
     function followPath(path, enemy) {
@@ -142,25 +144,28 @@
       renderGrid();
     }
 
-    function aStar(start, goal) {
+    function lazyAStar(start, goal, callback) {
       const openSet = [start];
       const cameFrom = {};
       const gScore = {};
       const fScore = {};
 
-      function key(pos) {
-        return `${pos.x},${pos.y}`;
-      }
-
+      const key = pos => `${pos.x},${pos.y}`;
       gScore[key(start)] = 0;
       fScore[key(start)] = heuristic(start, goal);
 
-      while (openSet.length > 0) {
+      function step() {
+        if (openSet.length === 0) {
+          callback(null);
+          return;
+        }
+
         openSet.sort((a, b) => fScore[key(a)] - fScore[key(b)]);
         const current = openSet.shift();
 
         if (current.x === goal.x && current.y === goal.y) {
-          return reconstructPath(cameFrom, current);
+          callback(reconstructPath(cameFrom, current));
+          return;
         }
 
         const neighbors = [
@@ -190,8 +195,11 @@
             }
           }
         }
+
+        animationFrame = requestAnimationFrame(step);
       }
-      return null;
+
+      animationFrame = requestAnimationFrame(step);
     }
 
     function heuristic(pos1, pos2) {
