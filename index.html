@@ -1,7 +1,7 @@
 <!DOCTYPE html><html lang="de">
 <head>
   <meta charset="UTF-8">
-  <title>Raster-Prototyp mit Kampf</title>
+  <title>Raster-Prototyp mit Wegfindung</title>
   <style>
     body { background: #111; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; }
     h1 { margin-top: 20px; }
@@ -29,7 +29,7 @@
   </style>
 </head>
 <body>
-  <h1>🧠 Stärke Merge Battle – Prototyp</h1>
+  <h1>🧠 Stärke Merge Battle – Prototyp mit Wegfindung</h1>
   <p>Spielerstärke: <span id="playerLevel">1</span></p>
   <div id="grid"></div>
   <p id="message"></p>  <script>
@@ -48,31 +48,32 @@
       { x: 20, y: 5, level: 3, alive: true }
     ];
 
+    const walls = [];
+    for (let y = 1; y <= 8; y++) walls.push({ x: 3, y });
+    for (let y = 10; y <= 20; y++) walls.push({ x: 15, y });
+
+    function isWall(x, y) {
+      return walls.some(w => w.x === x && w.y === y);
+    }
+
     function createCell(x, y) {
       const cell = document.createElement('div');
       cell.classList.add('cell');
       cell.dataset.x = x;
       cell.dataset.y = y;
 
-      // Spieler
       if (x === playerPosition.x && y === playerPosition.y) {
         cell.classList.add('player');
         cell.textContent = '🧍';
-      } 
-      // Gegner
-      else {
+      } else {
         const enemy = enemies.find(e => e.x === x && e.y === y && e.alive);
         if (enemy) {
           cell.classList.add('enemy');
           cell.textContent = enemy.level;
-          cell.addEventListener('click', () => fightEnemy(enemy));
-        } 
-        // Mauern
-        else if ((x === 3 && y >= 1 && y <= 8) || (x === 15 && y >= 10 && y <= 20)) {
+          cell.addEventListener('click', () => moveTo(enemy));
+        } else if (isWall(x, y)) {
           cell.classList.add('wall');
-        } 
-        // Leere Felder
-        else {
+        } else {
           cell.classList.add('empty');
         }
       }
@@ -88,6 +89,29 @@
           grid.appendChild(createCell(x, y));
         }
       }
+    }
+
+    function moveTo(enemy) {
+      const path = findPath(playerPosition, { x: enemy.x, y: enemy.y });
+      if (!path) {
+        message.textContent = 'Kein Weg zum Ziel!';
+        return;
+      }
+      followPath(path, enemy);
+    }
+
+    function followPath(path, enemy) {
+      if (path.length === 0) return;
+      const next = path.shift();
+      playerPosition = next;
+      renderGrid();
+      setTimeout(() => {
+        if (path.length > 0) {
+          followPath(path, enemy);
+        } else {
+          fightEnemy(enemy);
+        }
+      }, 100);
     }
 
     function fightEnemy(enemy) {
@@ -109,6 +133,39 @@
       playerPosition = { ...playerSpawn };
       enemies.forEach(e => e.alive = true);
       renderGrid();
+    }
+
+    function findPath(start, end) {
+      const queue = [[start]];
+      const visited = new Set();
+
+      while (queue.length > 0) {
+        const path = queue.shift();
+        const { x, y } = path[path.length - 1];
+        const key = `${x},${y}`;
+        if (visited.has(key)) continue;
+        visited.add(key);
+
+        if (x === end.x && y === end.y) return path;
+
+        const neighbors = [
+          { x: x + 1, y },
+          { x: x - 1, y },
+          { x, y: y + 1 },
+          { x, y: y - 1 }
+        ];
+
+        for (const n of neighbors) {
+          if (
+            n.x >= 0 && n.x < gridSize &&
+            n.y >= 0 && n.y < gridSize &&
+            !isWall(n.x, n.y)
+          ) {
+            queue.push([...path, n]);
+          }
+        }
+      }
+      return null;
     }
 
     renderGrid();
