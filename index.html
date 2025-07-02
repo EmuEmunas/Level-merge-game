@@ -1,7 +1,7 @@
 <!DOCTYPE html><html lang="de">
 <head>
   <meta charset="UTF-8">
-  <title>Raster-Prototyp</title>
+  <title>Raster-Prototyp mit Kampf</title>
   <style>
     body { background: #111; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; }
     h1 { margin-top: 20px; }
@@ -29,11 +29,24 @@
   </style>
 </head>
 <body>
-  <h1>32x32 Raster-Prototyp</h1>
-  <div id="grid"></div>  <script>
+  <h1>🧠 Stärke Merge Battle – Prototyp</h1>
+  <p>Spielerstärke: <span id="playerLevel">1</span></p>
+  <div id="grid"></div>
+  <p id="message"></p>  <script>
     const gridSize = 32;
     const grid = document.getElementById('grid');
-    let playerPosition = { x: 1, y: 1 };
+    const message = document.getElementById('message');
+    const playerLevelDisplay = document.getElementById('playerLevel');
+
+    let playerLevel = 1;
+    let playerSpawn = { x: 1, y: 1 };
+    let playerPosition = { ...playerSpawn };
+
+    const enemies = [
+      { x: 5, y: 1, level: 1, alive: true },
+      { x: 10, y: 10, level: 2, alive: true },
+      { x: 20, y: 5, level: 3, alive: true }
+    ];
 
     function createCell(x, y) {
       const cell = document.createElement('div');
@@ -41,25 +54,27 @@
       cell.dataset.x = x;
       cell.dataset.y = y;
 
-      // Platzierung des Spielers
+      // Spieler
       if (x === playerPosition.x && y === playerPosition.y) {
         cell.classList.add('player');
         cell.textContent = '🧍';
       } 
-      // Platzhalter-Gegner
-      else if ((x === 5 && y === 1) || (x === 10 && y === 10) || (x === 20 && y === 5)) {
-        cell.classList.add('enemy');
-        cell.textContent = '👾';
-        cell.addEventListener('click', () => moveTo(x, y));
-      } 
-      // Mauern
-      else if ((x === 3 && y >= 1 && y <= 8) || (x === 15 && y >= 10 && y <= 20)) {
-        cell.classList.add('wall');
-      } 
-      // Normales Feld
+      // Gegner
       else {
-        cell.classList.add('empty');
-        cell.addEventListener('click', () => moveTo(x, y));
+        const enemy = enemies.find(e => e.x === x && e.y === y && e.alive);
+        if (enemy) {
+          cell.classList.add('enemy');
+          cell.textContent = enemy.level;
+          cell.addEventListener('click', () => fightEnemy(enemy));
+        } 
+        // Mauern
+        else if ((x === 3 && y >= 1 && y <= 8) || (x === 15 && y >= 10 && y <= 20)) {
+          cell.classList.add('wall');
+        } 
+        // Leere Felder
+        else {
+          cell.classList.add('empty');
+        }
       }
 
       return cell;
@@ -67,6 +82,7 @@
 
     function renderGrid() {
       grid.innerHTML = '';
+      playerLevelDisplay.textContent = playerLevel;
       for (let y = 0; y < gridSize; y++) {
         for (let x = 0; x < gridSize; x++) {
           grid.appendChild(createCell(x, y));
@@ -74,8 +90,24 @@
       }
     }
 
-    function moveTo(x, y) {
-      playerPosition = { x, y };
+    function fightEnemy(enemy) {
+      if (playerLevel >= enemy.level) {
+        playerLevel += enemy.level;
+        enemy.alive = false;
+        playerPosition = { x: enemy.x, y: enemy.y };
+        message.textContent = `Gegner besiegt! Neue Stärke: ${playerLevel}`;
+      } else {
+        message.textContent = `Zu stark! Du verlierst und startest neu.`;
+        resetGame();
+        return;
+      }
+      renderGrid();
+    }
+
+    function resetGame() {
+      playerLevel = 1;
+      playerPosition = { ...playerSpawn };
+      enemies.forEach(e => e.alive = true);
       renderGrid();
     }
 
