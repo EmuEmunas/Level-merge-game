@@ -1,31 +1,84 @@
-<!DOCTYPE html>
-<html lang="de">
+<!DOCTYPE html><html lang="de">
 <head>
   <meta charset="UTF-8">
-  <title>Stärke Merge Battle</title>
+  <title>Raster-Prototyp</title>
   <style>
-    body { font-family: sans-serif; background: #1e1e1e; color: white; margin: 0; padding: 20px; }
-    #game { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
-    .enemy, .item, .boss { padding: 10px 20px; background: #333; border: 2px solid #888; border-radius: 8px; cursor: pointer; }
-    .enemy.dead, .item.dead, .boss.dead { opacity: 0.4; pointer-events: none; }
-    .x2 { background: #4caf50; border-color: #4caf50; }
-    .minus5 { background: #e53935; border-color: #e53935; }
-    .random { background: #03a9f4; border-color: #03a9f4; }
-    .boss { background: #9c27b0; border-color: #9c27b0; font-weight: bold; }
-    #log { background: #111; padding: 10px; max-height: 150px; overflow-y: auto; margin-top: 20px; border-radius: 5px; }
-    #nextLevelBtn { display: none; margin-top: 20px; padding: 10px 20px; font-size: 16px; background: #2196f3; color: white; border: none; border-radius: 5px; cursor: pointer; }
-    #stats { margin-top: 20px; font-size: 14px; }
+    body { background: #111; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; }
+    h1 { margin-top: 20px; }
+    #grid {
+      display: grid;
+      grid-template-columns: repeat(32, 20px);
+      grid-template-rows: repeat(32, 20px);
+      gap: 1px;
+      margin: 20px;
+    }
+    .cell {
+      width: 20px;
+      height: 20px;
+      background-color: #2c2c2c;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .player { background-color: limegreen; }
+    .enemy { background-color: crimson; }
+    .wall { background-color: #555; pointer-events: none; }
+    .empty { background-color: #2c2c2c; }
   </style>
 </head>
 <body>
-<h1>🧠 Stärke Merge Battle</h1>
-<p>Aktuelle Stärke: <span id="playerLevel">5</span> &nbsp;|&nbsp; Level: <span id="levelNumber">1</span> <span id="debuffText"></span></p>
-<div id="game"></div>
-<div id="log"></div>
-<button id="nextLevelBtn" onclick="startLevel()">Nächstes Level starten</button>
-<div id="stats"></div>
-<script>
-// Spiel-Logik kommt hier rein (siehe vorheriger Script-Inhalt aus Canvas)
-</script>
-</body>
+  <h1>32x32 Raster-Prototyp</h1>
+  <div id="grid"></div>  <script>
+    const gridSize = 32;
+    const grid = document.getElementById('grid');
+    let playerPosition = { x: 1, y: 1 };
+
+    function createCell(x, y) {
+      const cell = document.createElement('div');
+      cell.classList.add('cell');
+      cell.dataset.x = x;
+      cell.dataset.y = y;
+
+      // Platzierung des Spielers
+      if (x === playerPosition.x && y === playerPosition.y) {
+        cell.classList.add('player');
+        cell.textContent = '🧍';
+      } 
+      // Platzhalter-Gegner
+      else if ((x === 5 && y === 1) || (x === 10 && y === 10) || (x === 20 && y === 5)) {
+        cell.classList.add('enemy');
+        cell.textContent = '👾';
+        cell.addEventListener('click', () => moveTo(x, y));
+      } 
+      // Mauern
+      else if ((x === 3 && y >= 1 && y <= 8) || (x === 15 && y >= 10 && y <= 20)) {
+        cell.classList.add('wall');
+      } 
+      // Normales Feld
+      else {
+        cell.classList.add('empty');
+        cell.addEventListener('click', () => moveTo(x, y));
+      }
+
+      return cell;
+    }
+
+    function renderGrid() {
+      grid.innerHTML = '';
+      for (let y = 0; y < gridSize; y++) {
+        for (let x = 0; x < gridSize; x++) {
+          grid.appendChild(createCell(x, y));
+        }
+      }
+    }
+
+    function moveTo(x, y) {
+      playerPosition = { x, y };
+      renderGrid();
+    }
+
+    renderGrid();
+  </script></body>
 </html>
