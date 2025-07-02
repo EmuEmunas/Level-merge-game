@@ -1,7 +1,8 @@
-<!DOCTYPE html><html lang="de">
+<!DOCTYPE html>
+<html lang="de">
 <head>
   <meta charset="UTF-8">
-  <title>Raster-Prototyp mit einfacher Wegfindung</title>
+  <title>Stärke Merge Battle – Wegfindung mit Animation</title>
   <style>
     body { background: #111; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; }
     h1 { margin-top: 20px; }
@@ -32,7 +33,9 @@
   <h1>🧠 Stärke Merge Battle</h1>
   <p>Spielerstärke: <span id="playerLevel">1</span></p>
   <div id="grid"></div>
-  <p id="message"></p>  <script>
+  <p id="message"></p>
+
+  <script>
     const gridSize = 32;
     const grid = document.getElementById('grid');
     const message = document.getElementById('message');
@@ -92,6 +95,23 @@
     }
 
     function moveTo(enemy) {
+      const path = findPath(playerPosition, { x: enemy.x, y: enemy.y });
+      if (!path) {
+        message.textContent = 'Kein Weg zum Ziel!';
+        return;
+      }
+      animateMovement(path, () => fightEnemy(enemy));
+    }
+
+    function animateMovement(path, onComplete) {
+      if (path.length === 0) return onComplete();
+      const next = path.shift();
+      playerPosition = next;
+      renderGrid();
+      setTimeout(() => animateMovement(path, onComplete), 100);
+    }
+
+    function fightEnemy(enemy) {
       if (playerLevel >= enemy.level) {
         playerLevel += enemy.level;
         enemy.alive = false;
@@ -112,6 +132,66 @@
       renderGrid();
     }
 
+    function findPath(start, goal) {
+      const openSet = [start];
+      const cameFrom = {};
+      const gScore = {};
+      const fScore = {};
+
+      const key = pos => `${pos.x},${pos.y}`;
+      gScore[key(start)] = 0;
+      fScore[key(start)] = heuristic(start, goal);
+
+      while (openSet.length > 0) {
+        openSet.sort((a, b) => fScore[key(a)] - fScore[key(b)]);
+        const current = openSet.shift();
+
+        if (current.x === goal.x && current.y === goal.y) {
+          return reconstructPath(cameFrom, current);
+        }
+
+        const neighbors = [
+          { x: current.x + 1, y: current.y },
+          { x: current.x - 1, y: current.y },
+          { x: current.x, y: current.y + 1 },
+          { x: current.x, y: current.y - 1 }
+        ];
+
+        for (const neighbor of neighbors) {
+          if (
+            neighbor.x < 0 || neighbor.y < 0 ||
+            neighbor.x >= gridSize || neighbor.y >= gridSize ||
+            isWall(neighbor.x, neighbor.y)
+          ) continue;
+
+          const tentativeG = gScore[key(current)] + 1;
+          if (tentativeG < (gScore[key(neighbor)] || Infinity)) {
+            cameFrom[key(neighbor)] = current;
+            gScore[key(neighbor)] = tentativeG;
+            fScore[key(neighbor)] = tentativeG + heuristic(neighbor, goal);
+            if (!openSet.some(p => p.x === neighbor.x && p.y === neighbor.y)) {
+              openSet.push(neighbor);
+            }
+          }
+        }
+      }
+      return null;
+    }
+
+    function heuristic(pos1, pos2) {
+      return Math.abs(pos1.x - pos2.x) + Math.abs(pos1.y - pos2.y);
+    }
+
+    function reconstructPath(cameFrom, current) {
+      const path = [current];
+      while (cameFrom[`${current.x},${current.y}`]) {
+        current = cameFrom[`${current.x},${current.y}`];
+        path.unshift(current);
+      }
+      return path.slice(1);
+    }
+
     renderGrid();
-  </script></body>
+  </script>
+</body>
 </html>
