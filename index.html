@@ -1,7 +1,7 @@
 <!DOCTYPE html><html lang="de">
 <head>
   <meta charset="UTF-8">
-  <title>Raster-Prototyp mit A* Wegfindung</title>
+  <title>Raster-Prototyp mit A* und Suchbegrenzung</title>
   <style>
     body { background: #111; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; }
     h1 { margin-top: 20px; }
@@ -29,11 +29,12 @@
   </style>
 </head>
 <body>
-  <h1>🧠 Stärke Merge Battle – A* Wegfindung</h1>
+  <h1>🧠 Stärke Merge Battle – Begrenzte Wegsuche</h1>
   <p>Spielerstärke: <span id="playerLevel">1</span></p>
   <div id="grid"></div>
   <p id="message"></p>  <script>
     const gridSize = 32;
+    const searchLimit = 8; // maximale Reichweite
     const grid = document.getElementById('grid');
     const message = document.getElementById('message');
     const playerLevelDisplay = document.getElementById('playerLevel');
@@ -43,9 +44,9 @@
     let playerPosition = { ...playerSpawn };
 
     const enemies = [
-      { x: 5, y: 1, level: 1, alive: true },
-      { x: 10, y: 10, level: 2, alive: true },
-      { x: 20, y: 5, level: 3, alive: true }
+      { x: 4, y: 1, level: 1, alive: true },
+      { x: 6, y: 2, level: 2, alive: true },
+      { x: 8, y: 3, level: 3, alive: true }
     ];
 
     const walls = [];
@@ -92,6 +93,12 @@
     }
 
     function moveTo(enemy) {
+      const dx = Math.abs(enemy.x - playerPosition.x);
+      const dy = Math.abs(enemy.y - playerPosition.y);
+      if (dx > searchLimit || dy > searchLimit) {
+        message.textContent = 'Ziel liegt zu weit entfernt!';
+        return;
+      }
       const path = aStar(playerPosition, { x: enemy.x, y: enemy.y });
       if (!path) {
         message.textContent = 'Kein Weg zum Ziel!';
@@ -164,10 +171,13 @@
         ];
 
         for (const neighbor of neighbors) {
+          const dx = Math.abs(neighbor.x - playerPosition.x);
+          const dy = Math.abs(neighbor.y - playerPosition.y);
           if (
             neighbor.x < 0 || neighbor.y < 0 ||
             neighbor.x >= gridSize || neighbor.y >= gridSize ||
-            isWall(neighbor.x, neighbor.y)
+            isWall(neighbor.x, neighbor.y) ||
+            dx > searchLimit || dy > searchLimit
           ) continue;
 
           const tentativeG = gScore[key(current)] + 1;
