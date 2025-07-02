@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="de">
+<!DOCTYPE html>
+<html lang="de">
 <head>
   <meta charset="UTF-8">
   <title>Stärke Merge Battle</title>
@@ -24,50 +25,7 @@
 <button id="nextLevelBtn" onclick="startLevel()">Nächstes Level starten</button>
 <div id="stats"></div>
 <script>
-let level = 1;
-let baseStrength = 5;
-let playerStrength = 5;
-let debuff = 0;
-let bossTarget = Math.floor(Math.random() * 10) + 1;
-let bossPhase = 0;
-let bossMode = false;
-let totalEnemyStrength = 0;
-let enemies = [];
-let stats = { levelBeendet: 0, powerupsGenutzt: 0, fallenGetroffen: 0, zufallGenutzt: 0, bosseBesiegt: 0 };const gameDiv = document.getElementById('game'); const playerLevelSpan = document.getElementById('playerLevel'); const levelNumberSpan = document.getElementById('levelNumber'); const logDiv = document.getElementById('log'); const nextLevelBtn = document.getElementById('nextLevelBtn'); const statsDiv = document.getElementById('stats'); const debuffText = document.getElementById('debuffText');
-
-function log(msg) { logDiv.innerHTML += <div>${msg}</div>; logDiv.scrollTop = logDiv.scrollHeight; }
-
-function shuffle(arr) { for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; } }
-
-function updateUI() { gameDiv.innerHTML = ''; enemies.forEach((e, idx) => { const btn = document.createElement('div'); btn.className = e.type; if (e.dead) btn.classList.add('dead'); btn.textContent = e.type === 'item' ? e.effect.toUpperCase() : Stärke ${e.level}; btn.onclick = () => handleClick(e); gameDiv.appendChild(btn); }); playerLevelSpan.textContent = playerStrength; levelNumberSpan.textContent = level; debuffText.textContent = debuff > 0 ? ⚠️ Erschöpfung: -${debuff} Stärke : ''; }
-
-function handleClick(e) { if (e.dead) return;
-
-if (e.type === 'enemy' || e.type === 'boss') { if (playerStrength > e.level) { playerStrength += e.level; log(✅ Gegner Stärke ${e.level} besiegt. Neue Stärke: ${playerStrength}); e.dead = true; } else if (playerStrength === e.level) { log(⚠️ Gleichstand gegen Gegner Stärke ${e.level} – du verlierst.); gameOver(); return; } else { if (e.type === 'boss') { log(❌ Boss zu stark (${e.level}). Kampf verloren.); debuff = Math.min(5, debuff + 1); log(⚠️ Debuff erhalten: Erschöpfung (${debuff}/5)); nextLevel(); return; } else { log(💀 Gegner Stärke ${e.level} war zu stark. Game Over.); gameOver(); return; } } } else if (e.type === 'item') { if (e.effect === 'x2') { playerStrength *= 2; log(⚡ Powerup aktiviert! Neue Stärke: ${playerStrength}); stats.powerupsGenutzt++; } else if (e.effect === '-5') { if (playerStrength <= 5) { log(💀 -5 Falle war tödlich. Game Over.); gameOver(); return; } else { playerStrength -= 5; log(⚠️ -5 Falle getroffen. Neue Stärke: ${playerStrength}); stats.fallenGetroffen++; } } else if (e.effect === 'random') { const change = Math.floor(Math.random() * 11) - 5; playerStrength += change; log(🎲 Zufallseffekt: ${change > 0 ? '+' : ''}${change}. Neue Stärke: ${playerStrength}); stats.zufallGenutzt++; } e.dead = true; }
-
-updateUI(); if (enemies.every(x => x.dead || x.type === 'item')) { nextLevelBtn.style.display = 'inline-block'; } }
-
-function gameOver() { gameDiv.innerHTML = '<h2>Game Over</h2>'; nextLevelBtn.style.display = 'none'; }
-
-function nextLevel() { level++; playerStrength = baseStrength - debuff; nextLevelBtn.style.display = 'none'; startLevel(); }
-
-function startLevel() { if (level === bossTarget) { bossMode = true; bossPhase = 0; totalEnemyStrength = 0; generateBossPhase(); } else { generateLevel(); } updateUI(); }
-
-function generateBossPhase() { enemies = []; if (bossPhase < 2 + Math.floor(Math.random() * 3)) { const waveCount = 3 + Math.floor(Math.random() * 2); let valid = false; while (!valid) { enemies = []; for (let i = 0; i < waveCount; i++) { const lvl = Math.floor(playerStrength * 0.8 + Math.random() * 4); enemies.push({ type: 'enemy', level: lvl, dead: false }); totalEnemyStrength += lvl; } valid = enemies.some(e => e.level < playerStrength); } bossPhase++; } else { const bossStrength = Math.round(totalEnemyStrength * (0.95 + Math.random() * 0.1)); enemies = [{ type: 'boss', level: bossStrength, dead: false }]; log(🧟 Boss erscheint! Stärke: ${bossStrength}); } updateUI(); }
-
-function generateLevel() { playerStrength = baseStrength - debuff; enemies = []; const base = playerStrength; let total = 0;
-
-enemies.push({ type: 'enemy', level: base - 1, dead: false }); total += base - 1; const mid = base + Math.floor(Math.random() * 3); enemies.push({ type: 'enemy', level: mid, dead: false }); total += mid; const big = base + Math.floor(Math.random() * 6 + 5); enemies.push({ type: 'enemy', level: big, dead: false }); total += big;
-
-enemies.push({ type: 'item', effect: 'x2', dead: false }); enemies.push({ type: 'item', effect: '-5', dead: false });
-
-shuffle(enemies); }
-
-document.getElementById('nextLevelBtn').onclick = () => { if (bossMode && enemies.every(e => e.dead)) { if (enemies[0].type === 'boss') { stats.bosseBesiegt++; debuff = 0; log(🏆 Boss besiegt! Debuff entfernt.); bossMode = false; bossTarget = level + 1 + Math.floor(Math.random() * 9); nextLevel(); } else { bossPhase++; generateBossPhase(); } } else { stats.levelBeendet++; nextLevel(); } updateStats(); };
-
-function updateStats() { statsDiv.innerHTML = <p>Level beendet: ${stats.levelBeendet}</p> <p>Powerups genutzt: ${stats.powerupsGenutzt}</p> <p>Fallen getroffen: ${stats.fallenGetroffen}</p> <p>Zufall genutzt: ${stats.zufallGenutzt}</p> <p>Bosse besiegt: ${stats.bosseBesiegt}</p>; }
-
-startLevel(); </script>
-
+// Spiel-Logik kommt hier rein (siehe vorheriger Script-Inhalt aus Canvas)
+</script>
 </body>
 </html>
