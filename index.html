@@ -1,7 +1,7 @@
 <!DOCTYPE html><html lang="de">
 <head>
   <meta charset="UTF-8">
-  <title>Raster-Prototyp mit Lazy Evaluation</title>
+  <title>Raster-Prototyp mit einfacher Wegfindung</title>
   <style>
     body { background: #111; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; }
     h1 { margin-top: 20px; }
@@ -29,12 +29,11 @@
   </style>
 </head>
 <body>
-  <h1>🧠 Stärke Merge Battle – Lazy Evaluation</h1>
+  <h1>🧠 Stärke Merge Battle</h1>
   <p>Spielerstärke: <span id="playerLevel">1</span></p>
   <div id="grid"></div>
   <p id="message"></p>  <script>
     const gridSize = 32;
-    const searchLimit = 8;
     const grid = document.getElementById('grid');
     const message = document.getElementById('message');
     const playerLevelDisplay = document.getElementById('playerLevel');
@@ -42,7 +41,6 @@
     let playerLevel = 1;
     let playerSpawn = { x: 1, y: 1 };
     let playerPosition = { ...playerSpawn };
-    let animationFrame;
 
     const enemies = [
       { x: 4, y: 1, level: 1, alive: true },
@@ -72,7 +70,7 @@
         if (enemy) {
           cell.classList.add('enemy');
           cell.textContent = enemy.level;
-          cell.addEventListener('click', () => lazyMoveTo(enemy));
+          cell.addEventListener('click', () => moveTo(enemy));
         } else if (isWall(x, y)) {
           cell.classList.add('wall');
         } else {
@@ -93,37 +91,7 @@
       }
     }
 
-    function lazyMoveTo(enemy) {
-      const dx = Math.abs(enemy.x - playerPosition.x);
-      const dy = Math.abs(enemy.y - playerPosition.y);
-      if (dx > searchLimit || dy > searchLimit) {
-        message.textContent = 'Ziel liegt zu weit entfernt!';
-        return;
-      }
-      lazyAStar(playerPosition, { x: enemy.x, y: enemy.y }, path => {
-        if (!path) {
-          message.textContent = 'Kein Weg zum Ziel!';
-        } else {
-          followPath(path, enemy);
-        }
-      });
-    }
-
-    function followPath(path, enemy) {
-      if (path.length === 0) return;
-      const next = path.shift();
-      playerPosition = next;
-      renderGrid();
-      setTimeout(() => {
-        if (path.length > 0) {
-          followPath(path, enemy);
-        } else {
-          fightEnemy(enemy);
-        }
-      }, 100);
-    }
-
-    function fightEnemy(enemy) {
+    function moveTo(enemy) {
       if (playerLevel >= enemy.level) {
         playerLevel += enemy.level;
         enemy.alive = false;
@@ -142,77 +110,6 @@
       playerPosition = { ...playerSpawn };
       enemies.forEach(e => e.alive = true);
       renderGrid();
-    }
-
-    function lazyAStar(start, goal, callback) {
-      const openSet = [start];
-      const cameFrom = {};
-      const gScore = {};
-      const fScore = {};
-
-      const key = pos => `${pos.x},${pos.y}`;
-      gScore[key(start)] = 0;
-      fScore[key(start)] = heuristic(start, goal);
-
-      function step() {
-        if (openSet.length === 0) {
-          callback(null);
-          return;
-        }
-
-        openSet.sort((a, b) => fScore[key(a)] - fScore[key(b)]);
-        const current = openSet.shift();
-
-        if (current.x === goal.x && current.y === goal.y) {
-          callback(reconstructPath(cameFrom, current));
-          return;
-        }
-
-        const neighbors = [
-          { x: current.x + 1, y: current.y },
-          { x: current.x - 1, y: current.y },
-          { x: current.x, y: current.y + 1 },
-          { x: current.x, y: current.y - 1 }
-        ];
-
-        for (const neighbor of neighbors) {
-          const dx = Math.abs(neighbor.x - playerPosition.x);
-          const dy = Math.abs(neighbor.y - playerPosition.y);
-          if (
-            neighbor.x < 0 || neighbor.y < 0 ||
-            neighbor.x >= gridSize || neighbor.y >= gridSize ||
-            isWall(neighbor.x, neighbor.y) ||
-            dx > searchLimit || dy > searchLimit
-          ) continue;
-
-          const tentativeG = gScore[key(current)] + 1;
-          if (tentativeG < (gScore[key(neighbor)] || Infinity)) {
-            cameFrom[key(neighbor)] = current;
-            gScore[key(neighbor)] = tentativeG;
-            fScore[key(neighbor)] = tentativeG + heuristic(neighbor, goal);
-            if (!openSet.some(p => p.x === neighbor.x && p.y === neighbor.y)) {
-              openSet.push(neighbor);
-            }
-          }
-        }
-
-        animationFrame = requestAnimationFrame(step);
-      }
-
-      animationFrame = requestAnimationFrame(step);
-    }
-
-    function heuristic(pos1, pos2) {
-      return Math.abs(pos1.x - pos2.x) + Math.abs(pos1.y - pos2.y);
-    }
-
-    function reconstructPath(cameFrom, current) {
-      const path = [current];
-      while (cameFrom[`${current.x},${current.y}`]) {
-        current = cameFrom[`${current.x},${current.y}`];
-        path.unshift(current);
-      }
-      return path.slice(1);
     }
 
     renderGrid();
