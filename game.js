@@ -1,95 +1,38 @@
-import * as BABYLON from "https://cdn.babylonjs.com/babylon.js";
-import * as GUI from "https://cdn.babylonjs.com/gui/babylon.gui.min.js";
-
 const canvas = document.getElementById("renderCanvas");
 const engine = new BABYLON.Engine(canvas, true);
 const scene = new BABYLON.Scene(engine);
-scene.clearColor = new BABYLON.Color3(0.18, 0.18, 0.25);
+scene.clearColor = new BABYLON.Color3(0.18, 0.18, 0.28);
 
-const camera = new BABYLON.ArcRotateCamera("camera", Math.PI / 2, Math.PI / 3.5, 25, BABYLON.Vector3.Zero(), scene);
+const camera = new BABYLON.ArcRotateCamera("Camera", Math.PI / 4, Math.PI / 4, 10, BABYLON.Vector3.Zero(), scene);
 camera.attachControl(canvas, true);
+camera.lowerRadiusLimit = 5;
+camera.upperRadiusLimit = 50;
+
 const light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 0), scene);
 
-const ground = BABYLON.MeshBuilder.CreateGround("ground", { width: 16, height: 16 }, scene);
-ground.position.y = 0;
+const ground = BABYLON.MeshBuilder.CreateGround("ground", { width: 20, height: 20 }, scene);
 
-const player = BABYLON.MeshBuilder.CreateBox("player", { size: 1 }, scene);
-player.position = new BABYLON.Vector3(-6, 0.5, 0);
-let playerStrength = 1;
+// Beispiel-Charakter
+const player = BABYLON.MeshBuilder.CreateSphere("player", { diameter: 1 }, scene);
+player.position.y = 0.5;
+player.position.x = -5;
+player.position.z = -5;
 
-const playerLabel = createWorldLabel(player, "🧍 Stärke: 1");
+const playerLabel = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");
+const playerText = new BABYLON.GUI.TextBlock();
+playerText.text = "🧍 Spielerstärke: 1";
+playerText.color = "white";
+playerText.fontSize = 18;
+playerText.top = "-45%";
+playerText.left = "-45%";
+playerText.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
+playerText.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
+playerLabel.addControl(playerText);
 
-function createWorldLabel(target, text) {
-  const plane = BABYLON.MeshBuilder.CreatePlane("label", { width: 2, height: 0.6 }, scene);
-  plane.parent = target;
-  plane.position.y = 1.5;
-  const tex = GUI.AdvancedDynamicTexture.CreateForMesh(plane);
-  const label = new GUI.TextBlock();
-  label.text = text;
-  label.color = "white";
-  label.fontSize = 50;
-  tex.addControl(label);
-  return label;
-}
-
-function createEnemy(position, level) {
-  const enemy = BABYLON.MeshBuilder.CreateSphere("enemy", { diameter: 1 }, scene);
-  enemy.position = position.add(new BABYLON.Vector3(0, 0.5, 0));
-  enemy.metadata = { strength: level };
-
-  const labelPlane = BABYLON.MeshBuilder.CreatePlane("enemyLabel", { width: 1, height: 0.5 }, scene);
-  labelPlane.position = new BABYLON.Vector3(0, 1.3, 0);
-  labelPlane.parent = enemy;
-  const tex = GUI.AdvancedDynamicTexture.CreateForMesh(labelPlane);
-  const label = new GUI.TextBlock();
-  label.text = "Lvl " + level;
-  label.color = "white";
-  label.fontSize = 40;
-  label.background = "red";
-  tex.addControl(label);
-
-  return enemy;
-}
-
-const enemies = [
-  createEnemy(new BABYLON.Vector3(-2, 0, 0), 1),
-  createEnemy(new BABYLON.Vector3(2, 0, 0), 2),
-  createEnemy(new BABYLON.Vector3(6, 0, 0), 3),
-];
-
-scene.onPointerObservable.add((pointerInfo) => {
-  if (pointerInfo.type === BABYLON.PointerEventTypes.POINTERPICK) {
-    const picked = pointerInfo.pickInfo.pickedMesh;
-    if (picked && picked.name.startsWith("enemy")) {
-      const enemy = picked;
-      const strength = enemy.metadata.strength;
-
-      if (strength <= playerStrength) {
-        playerStrength += strength;
-        playerLabel.text = "🧍 Stärke: " + playerStrength;
-        enemy.dispose();
-      } else {
-        alert("🛑 Gegner war zu stark! Versuch es erneut.");
-        resetGame();
-      }
-    }
-  }
+engine.runRenderLoop(() => {
+  scene.render();
 });
 
-function resetGame() {
-  player.position = new BABYLON.Vector3(-6, 0.5, 0);
-  playerStrength = 1;
-  playerLabel.text = "🧍 Stärke: 1";
-
-  enemies.forEach(e => e.dispose());
-  enemies.length = 0;
-
-  enemies.push(
-    createEnemy(new BABYLON.Vector3(-2, 0, 0), 1),
-    createEnemy(new BABYLON.Vector3(2, 0, 0), 2),
-    createEnemy(new BABYLON.Vector3(6, 0, 0), 3),
-  );
-}
-
-engine.runRenderLoop(() => scene.render());
-window.addEventListener("resize", () => engine.resize());
+window.addEventListener("resize", () => {
+  engine.resize();
+});
