@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8">
-  <title>Stärke Merge Battle – Wegfindung mit Animation</title>
+  <title>Stärke Merge Battle – einfache Wegfindung</title>
   <style>
     body { background: #111; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; }
     h1 { margin-top: 20px; }
@@ -73,7 +73,7 @@
         if (enemy) {
           cell.classList.add('enemy');
           cell.textContent = enemy.level;
-          cell.addEventListener('click', () => moveTo(enemy));
+          cell.addEventListener('click', () => walkTo(enemy));
         } else if (isWall(x, y)) {
           cell.classList.add('wall');
         } else {
@@ -94,21 +94,21 @@
       }
     }
 
-    function moveTo(enemy) {
-      const path = findPath(playerPosition, { x: enemy.x, y: enemy.y });
+    function walkTo(enemy) {
+      const path = simplePath(playerPosition, { x: enemy.x, y: enemy.y });
       if (!path) {
-        message.textContent = 'Kein Weg zum Ziel!';
+        message.textContent = 'Kein Weg zum Gegner!';
         return;
       }
-      animateMovement(path, () => fightEnemy(enemy));
+      followPath(path, () => fightEnemy(enemy));
     }
 
-    function animateMovement(path, onComplete) {
-      if (path.length === 0) return onComplete();
+    function followPath(path, onArrive) {
+      if (path.length === 0) return onArrive();
       const next = path.shift();
       playerPosition = next;
       renderGrid();
-      setTimeout(() => animateMovement(path, onComplete), 100);
+      setTimeout(() => followPath(path, onArrive), 100);
     }
 
     function fightEnemy(enemy) {
@@ -120,9 +120,38 @@
       } else {
         message.textContent = `Zu stark! Du verlierst und startest neu.`;
         resetGame();
-        return;
       }
       renderGrid();
+    }
+
+    function simplePath(start, goal) {
+      const visited = new Set();
+      const queue = [{ ...start, path: [] }];
+      while (queue.length) {
+        const current = queue.shift();
+        const key = `${current.x},${current.y}`;
+        if (visited.has(key)) continue;
+        visited.add(key);
+
+        if (current.x === goal.x && current.y === goal.y) {
+          return [...current.path, { x: current.x, y: current.y }].slice(1);
+        }
+
+        const directions = [
+          { x: 1, y: 0 },
+          { x: -1, y: 0 },
+          { x: 0, y: 1 },
+          { x: 0, y: -1 }
+        ];
+
+        for (const dir of directions) {
+          const nx = current.x + dir.x;
+          const ny = current.y + dir.y;
+          if (nx < 0 || ny < 0 || nx >= gridSize || ny >= gridSize || isWall(nx, ny)) continue;
+          queue.push({ x: nx, y: ny, path: [...current.path, { x: current.x, y: current.y }] });
+        }
+      }
+      return null;
     }
 
     function resetGame() {
@@ -130,65 +159,6 @@
       playerPosition = { ...playerSpawn };
       enemies.forEach(e => e.alive = true);
       renderGrid();
-    }
-
-    function findPath(start, goal) {
-      const openSet = [start];
-      const cameFrom = {};
-      const gScore = {};
-      const fScore = {};
-
-      const key = pos => `${pos.x},${pos.y}`;
-      gScore[key(start)] = 0;
-      fScore[key(start)] = heuristic(start, goal);
-
-      while (openSet.length > 0) {
-        openSet.sort((a, b) => fScore[key(a)] - fScore[key(b)]);
-        const current = openSet.shift();
-
-        if (current.x === goal.x && current.y === goal.y) {
-          return reconstructPath(cameFrom, current);
-        }
-
-        const neighbors = [
-          { x: current.x + 1, y: current.y },
-          { x: current.x - 1, y: current.y },
-          { x: current.x, y: current.y + 1 },
-          { x: current.x, y: current.y - 1 }
-        ];
-
-        for (const neighbor of neighbors) {
-          if (
-            neighbor.x < 0 || neighbor.y < 0 ||
-            neighbor.x >= gridSize || neighbor.y >= gridSize ||
-            isWall(neighbor.x, neighbor.y)
-          ) continue;
-
-          const tentativeG = gScore[key(current)] + 1;
-          if (tentativeG < (gScore[key(neighbor)] || Infinity)) {
-            cameFrom[key(neighbor)] = current;
-            gScore[key(neighbor)] = tentativeG;
-            fScore[key(neighbor)] = tentativeG + heuristic(neighbor, goal);
-            if (!openSet.some(p => p.x === neighbor.x && p.y === neighbor.y)) {
-              openSet.push(neighbor);
-            }
-          }
-        }
-      }
-      return null;
-    }
-
-    function heuristic(pos1, pos2) {
-      return Math.abs(pos1.x - pos2.x) + Math.abs(pos1.y - pos2.y);
-    }
-
-    function reconstructPath(cameFrom, current) {
-      const path = [current];
-      while (cameFrom[`${current.x},${current.y}`]) {
-        current = cameFrom[`${current.x},${current.y}`];
-        path.unshift(current);
-      }
-      return path.slice(1);
     }
 
     renderGrid();
