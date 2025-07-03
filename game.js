@@ -1,120 +1,85 @@
-// Spiel mit Babylon.js
+
 const canvas = document.getElementById("renderCanvas");
 const engine = new BABYLON.Engine(canvas, true);
 let playerStrength = 1;
-let playerMesh;
+let playerMesh = null;
+
+const createLabel = (text, color = "red") => {
+    const plane = BABYLON.MeshBuilder.CreatePlane("labelPlane", {width: 1, height: 0.5});
+    plane.isPickable = false;
+    const advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateForMesh(plane);
+    const label = new BABYLON.GUI.TextBlock();
+    label.text = text;
+    label.color = "white";
+    label.background = color;
+    label.fontSize = 100;
+    advancedTexture.addControl(label);
+    return plane;
+};
 
 const createScene = () => {
     const scene = new BABYLON.Scene(engine);
-    scene.clearColor = new BABYLON.Color3(0.2, 0.2, 0.3);
-
-    const camera = new BABYLON.ArcRotateCamera("camera", -Math.PI/2, Math.PI/3, 15, BABYLON.Vector3.Zero(), scene);
+    const camera = new BABYLON.ArcRotateCamera("Camera", Math.PI / 4, Math.PI / 3, 10, BABYLON.Vector3.Zero(), scene);
     camera.attachControl(canvas, true);
-    camera.lowerRadiusLimit = 5;
-    camera.upperRadiusLimit = 20;
+    const light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 0), scene);
 
-    const light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(1, 1, 0), scene);
+    const ground = BABYLON.MeshBuilder.CreateGround("ground", {width: 10, height: 10}, scene);
 
-    const ground = BABYLON.MeshBuilder.CreateGround("ground", { width: 10, height: 10 }, scene);
-    const groundMaterial = new BABYLON.StandardMaterial("groundMat", scene);
-    groundMaterial.diffuseColor = new BABYLON.Color3(0.15, 0.15, 0.15);
-    ground.material = groundMaterial;
+    // Spieler als Kegel
+    playerMesh = BABYLON.MeshBuilder.CreateCylinder("player", {diameterTop: 0, diameterBottom: 1, height: 2}, scene);
+    playerMesh.position.y = 1;
+    const playerMaterial = new BABYLON.StandardMaterial("playerMat", scene);
+    playerMaterial.diffuseColor = new BABYLON.Color3(0, 0.5, 1);
+    playerMesh.material = playerMaterial;
 
-    // GUI
-    const gui = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");
+    const playerLabel = createLabel(`👤 ${playerStrength}`, "blue");
+    playerLabel.parent = playerMesh;
+    playerLabel.position.y = 2.2;
 
-    function createLabel(text) {
-        const rect = new BABYLON.GUI.Rectangle();
-        rect.background = "red";
-        rect.height = "24px";
-        rect.width = "50px";
-        rect.cornerRadius = 5;
-        rect.thickness = 1;
-        rect.color = "white";
-        gui.addControl(rect);
+    const enemyLevels = [1, 2, 3];
+    const enemyMeshes = [];
 
-        const label = new BABYLON.GUI.TextBlock();
-        label.text = text;
-        label.color = "white";
-        label.fontSize = 14;
-        rect.addControl(label);
+    enemyLevels.forEach((level, index) => {
+        const enemy = BABYLON.MeshBuilder.CreateSphere(`enemy${index}`, {diameter: 1}, scene);
+        enemy.position = new BABYLON.Vector3(index * 2 - 2, 0.5, 3);
+        const enemyMaterial = new BABYLON.StandardMaterial(`enemyMat${index}`, scene);
+        enemyMaterial.diffuseColor = new BABYLON.Color3(1, 0, 0);
+        enemy.material = enemyMaterial;
 
-        return rect;
-    }
+        const label = createLabel(`Lvl ${level}`);
+        label.parent = enemy;
+        label.position.y = 1.2;
 
-    function createEnemy(name, level, posX, posZ) {
-        const enemy = BABYLON.MeshBuilder.CreateSphere(name, { diameter: 1 }, scene);
-        enemy.position = new BABYLON.Vector3(posX, 0.5, posZ);
         enemy.level = level;
+        enemyMeshes.push(enemy);
+    });
 
-        const label = createLabel("Lvl " + level);
-        label.linkWithMesh(enemy);
-        label.linkOffsetY = -30;
-
-        enemy.actionManager = new BABYLON.ActionManager(scene);
-        enemy.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPickTrigger, () => {
-            if (!playerMesh) return;
-
+    scene.onPointerObservable.add((pointerInfo) => {
+        if (pointerInfo.pickInfo.hit && pointerInfo.pickInfo.pickedMesh && pointerInfo.pickInfo.pickedMesh.level !== undefined) {
+            const enemy = pointerInfo.pickInfo.pickedMesh;
             if (playerStrength >= enemy.level) {
                 playerStrength += enemy.level;
                 enemy.dispose();
-                label.dispose();
-                updatePlayerLabel();
+                if (playerMesh && playerMesh.getChildMeshes()[0]) {
+                    playerMesh.getChildMeshes()[0].dispose();
+                }
+                const newLabel = createLabel(`👤 ${playerStrength}`, "blue");
+                newLabel.parent = playerMesh;
+                newLabel.position.y = 2.2;
             } else {
-                showDefeatMessage();
-                resetGame(scene);
+                alert("Der Gegner war zu stark! Versuche es erneut.");
+                location.reload();
             }
-        }));
-
-        return enemy;
-    }
-
-    function createPlayer() {
-        const player = BABYLON.MeshBuilder.CreateSphere("player", { diameter: 1 }, scene);
-        player.position = new BABYLON.Vector3(-3, 0.5, -3);
-        return player;
-    }
-
-    function showDefeatMessage() {
-        const msg = new BABYLON.GUI.TextBlock();
-        msg.text = "Zu stark! Starte von vorn.";
-        msg.color = "white";
-        msg.fontSize = 24;
-        msg.top = "-40%";
-        gui.addControl(msg);
-        setTimeout(() => gui.removeControl(msg), 2000);
-    }
-
-    let playerLabel;
-    function updatePlayerLabel() {
-        if (playerLabel) gui.removeControl(playerLabel);
-        playerLabel = createLabel("Lvl " + playerStrength);
-        playerLabel.linkWithMesh(playerMesh);
-        playerLabel.linkOffsetY = -30;
-    }
-
-    function resetGame(scene) {
-        scene.meshes.forEach(mesh => {
-            if (mesh.name.startsWith("enemy")) mesh.dispose();
-        });
-        playerMesh.position = new BABYLON.Vector3(-3, 0.5, -3);
-        playerStrength = 1;
-        updatePlayerLabel();
-        createEnemy("enemy1", 1, -1, -1);
-        createEnemy("enemy2", 2, 1, 1);
-        createEnemy("enemy3", 3, 3, 2);
-    }
-
-    playerMesh = createPlayer();
-    updatePlayerLabel();
-
-    createEnemy("enemy1", 1, -1, -1);
-    createEnemy("enemy2", 2, 1, 1);
-    createEnemy("enemy3", 3, 3, 2);
+        }
+    }, BABYLON.PointerEventTypes.POINTERPICK);
 
     return scene;
 };
 
 const scene = createScene();
-engine.runRenderLoop(() => scene.render());
-window.addEventListener("resize", () => engine.resize());
+engine.runRenderLoop(() => {
+    scene.render();
+});
+window.addEventListener("resize", () => {
+    engine.resize();
+});
