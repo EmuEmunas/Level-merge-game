@@ -1,36 +1,25 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8" />
-  <title>Level Merge Game</title>
-  <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-      background: #2e2e46;
-    }
-    canvas {
-      width: 100vw;
-      height: 100vh;
-      display: block;
-    }
-  </style>
+    <meta charset="UTF-8" />
+    <title>Level Merge Game</title>
+    <style>
+        html, body { margin: 0; padding: 0; overflow: hidden; background-color: #2c2c40; }
+        #renderCanvas { width: 100vw; height: 100vh; display: block; }
+        .gui-label {
+            background-color: red;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+        }
+    </style>
 </head>
 <body>
-  <canvas id="renderCanvas"></canvas>
-
-  <!-- Babylon.js klassisch laden -->
-  <script src="https://cdn.babylonjs.com/babylon.js"></script>
-  <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
-
-  <!-- Babylon Core -->
-<script src="https://cdn.babylonjs.com/babylon.js"></script>
-
-<!-- Babylon GUI hinzufügen -->
-<script src="https://cdn.babylonjs.com/gui/babylon.gui.min.js"></script>
-  
-  <!-- Dein Game -->
-  <script src="game.js"></script>
+    <canvas id="renderCanvas"></canvas>
+    <script src="https://cdn.babylonjs.com/babylon.js"></script>
+    <script src="https://cdn.babylonjs.com/gui/babylon.gui.min.js"></script>
+    <script src="game.js"></script>
 </body>
 </html>
