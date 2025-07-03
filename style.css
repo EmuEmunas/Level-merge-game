@@ -1,12 +1,12 @@
-body, html {
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-  background-color: #2c2c44;
+html, body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background-color: #2e2c45;
 }
 
 #renderCanvas {
-  width: 100vw;
-  height: 100vh;
-  display: block;
+    width: 100vw;
+    height: 100vh;
+    display: block;
 }
